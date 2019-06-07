@@ -5,62 +5,158 @@ using UnityEngine;
 
 public class PlayerController : MonoBehaviour
 {
-
     //Movement VAR's
-    public float moveSpeed = 5f;
-    public float jumpForce = 5f;
-    public Rigidbody rigid;
-    public Vector3 Direction;
+    public float moveSpeed = 25f;
+    public float jumpForce = 1f;
+    public float moveFriction = 7f;
+    public float rollSpeed = 7f;
+    public float rollDelay = 0.1f;
 
-    Animator mAnim;
+    //Bools to check states
+    public bool isRoll = false;
+    public bool isBackstep = false;
+    public bool canMove = true;
+    public bool isBlocking = false;
+
+    //Calling components
+    private Rigidbody mRigid;
+    private Animator mAnim;
+    private Collider mColl;
+
+    //Calling Vectors
+    public Vector3 Direction;
+    public Vector3 tempVel;
 
     // Start is called before the first frame update
     void Start()
     {
-        rigid = GetComponent<Rigidbody>();
+        mRigid = GetComponent<Rigidbody>();
+        mAnim = GetComponent<Animator>();
+        mColl = GetComponent<Collider>();
     }
 
     void Update()
     {
-
+        Animation();
+        IsGrounded();
     }
     // Update is called once per frame
     void FixedUpdate()
     {
-        Animation();
         Movement();
     }
 
     void Animation()
     {
-        mAnim = GameObject.FindWithTag("Player").GetComponent<Animator>();
-
         mAnim.SetFloat("Speed", Math.Max(Math.Abs(Input.GetAxis("Horizontal")), Math.Abs(Input.GetAxis("Vertical"))));
+    }
+
+    bool IsGrounded()  //Method to check if there is a collider below
+    {
+        return Physics.Raycast(transform.position, Vector3.down, mColl.bounds.extents.y + 0.5f);
+    }
+
+    void FootL()
+    {
+        //TODO: Add footstep sounds
+    }
+
+    void FootR()
+    {
+        //TODO: Add footstep sounds
+    }
+
+    void Jump()
+    {
+        if (IsGrounded())
+        {
+            Vector3 jump = new Vector3(0, jumpForce, 0);
+
+            mRigid.AddForce(jump, ForceMode.Impulse);
+        }
+    }
+
+    IEnumerator Roll()
+    {
+        isRoll = true;
+        canMove = false;
+        mAnim.SetBool("Isrolling", true);
+
+        mRigid.AddForce(transform.forward * rollSpeed);
+        yield return new WaitForSeconds(rollDelay);
+
+        canMove = true;
+        isRoll = false;
+    }
+
+    void Backstep()
+    {
+        isBackstep = true;
+        mAnim.SetBool("Isbackstep", true);
+        mRigid.AddForce(-transform.forward * 50f, ForceMode.VelocityChange);
+    }
+
+    void Block()
+    {
+        canMove = false;
+        mRigid.velocity = new Vector3(0, tempVel.y, 0);
+        isBlocking = true;
+        mAnim.SetBool("Isblocking", true);
     }
 
     void Movement()
     {
+        Vector3 forward = Camera.main.transform.forward;
+        Vector3 right = Camera.main.transform.right;
+
         float moveHorizontal = Input.GetAxis("Horizontal");
         float moveVertical = Input.GetAxis("Vertical");
 
-        Vector3 jump = new Vector3(0, jumpForce, 0);
-        Vector3 movement = new Vector3(moveHorizontal, 0.0f, moveVertical);
+        Vector3 playerMove = forward * moveVertical + right * moveHorizontal;
 
-        if (Input.GetButtonDown("Jump"))
+        if (canMove)
         {
-            rigid.AddForce(jump, ForceMode.Impulse);
+            tempVel.x = playerMove.x * moveSpeed;
+            tempVel.z = playerMove.z * moveSpeed;
+            tempVel.y = 0.0f;
         }
 
-        if (moveHorizontal + moveVertical != 0)
+        if ((moveHorizontal + moveVertical != 0) && !isRoll)
         {
-            rigid.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(movement), 0.2F);
+            mRigid.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(new Vector3(playerMove.x, 0, playerMove.z)), 0.2F);
         }
 
-        Vector3 nextpos = transform.position;
+        if (Input.GetButtonDown("L1") && canMove && IsGrounded())
+        {
+            Block();
+        }
 
-        nextpos += movement * moveSpeed * Time.deltaTime;
+        if (Input.GetButtonUp("L1"))
+        {
+            canMove = true;
+            isBlocking = false;
+            mAnim.SetBool("Isblocking", false);
+        }
 
-        rigid.MovePosition(nextpos);
+        if (Input.GetButtonDown("Triangle"))
+        {
+            Jump();
+        }
+
+        if (Input.GetButtonDown("Circle") && !isRoll && canMove && !isBackstep)
+        {
+            if ((Mathf.Abs(Input.GetAxis("Horizontal")) + Mathf.Abs(Input.GetAxis("Vertical")) > 0))
+            {
+                StartCoroutine(Roll());
+            }
+            else
+            {
+                Backstep();
+            }
+        }
+        mRigid.velocity += tempVel;
+
+        mRigid.velocity = Vector3.Scale(new Vector3(mRigid.velocity.x, mRigid.velocity.y, mRigid.velocity.z), new Vector3(moveFriction, 1.0f, moveFriction));
     }
 }
 

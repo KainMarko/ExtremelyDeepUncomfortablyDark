@@ -141,7 +141,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4283388011225748, guid: 9d2d21ead9f817446aa6c299b76f7e89, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 0
+      value: 1.12
       objectReference: {fileID: 0}
     - target: {fileID: 4283388011225748, guid: 9d2d21ead9f817446aa6c299b76f7e89, type: 3}
       propertyPath: m_LocalPosition.z
@@ -229,10 +229,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ebdcbf20262d62943a9a1dd909cb388b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  moveSpeed: 5
+  moveSpeed: 1
   jumpForce: 5
-  rigid: {fileID: 0}
+  moveFriction: 0.95
+  rollSpeed: 7
+  rollDelay: 0.1
+  isRoll: 0
+  isBackstep: 0
+  canMove: 1
+  isBlocking: 0
   Direction: {x: 0, y: 0, z: 0}
+  tempVel: {x: 0, y: 0, z: 0}
 --- !u!4 &85799998 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 4283388011225748, guid: 9d2d21ead9f817446aa6c299b76f7e89,
@@ -312,7 +319,7 @@ Light:
   m_BounceIntensity: 1
   m_ColorTemperature: 6570
   m_UseColorTemperature: 0
-  m_BoundingSphereOverride: {x: 0, y: 0, z: 0, w: 0}
+  m_BoundingSphereOverride: {x: 0, y: 0, z: NaN, w: 8.4e-44}
   m_UseBoundingSphereOverride: 0
   m_ShadowRadius: 0
   m_ShadowAngle: 0
