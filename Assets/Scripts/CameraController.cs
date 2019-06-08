@@ -14,6 +14,7 @@ public class CameraController : MonoBehaviour
     private float height = 5.0f;
 
     private float rotateSpeed = 2.0f;
+    private float zoomSpeed = 0.2f;
 
     private const float distance_max = 12.0f;
     private const float distance_min = 3.0f;
@@ -32,8 +33,8 @@ public class CameraController : MonoBehaviour
     {
         currentX += Input.GetAxis("Horizontal Rotation") * rotateSpeed;
 
-        distance += Input.GetAxis("Zoom");
-        height += Input.GetAxis("Zoom") / 2;
+        distance += Input.GetAxis("Zoom") * zoomSpeed;
+        height += Input.GetAxis("Zoom") / 2 * zoomSpeed;
 
         height = Mathf.Clamp(height, height_min, height_max);
         distance = Mathf.Clamp(distance, distance_min, distance_max);

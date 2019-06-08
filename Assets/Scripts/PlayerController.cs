@@ -48,7 +48,7 @@ public class PlayerController : MonoBehaviour
 
     void Animation()
     {
-        mAnim.SetFloat("Speed", Math.Max(Math.Abs(Input.GetAxis("Horizontal")), Math.Abs(Input.GetAxis("Vertical"))));
+        mAnim.SetFloat("Speed", (Math.Abs(Input.GetAxis("Horizontal")) + Math.Abs(Input.GetAxis("Vertical"))));
     }
 
     bool IsGrounded()  //Method to check if there is a collider below
