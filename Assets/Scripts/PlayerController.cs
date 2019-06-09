@@ -6,17 +6,29 @@ using UnityEngine;
 public class PlayerController : MonoBehaviour
 {
     //Movement VAR's
-    public float moveSpeed = 25f;
+    public float moveSpeed = 3f;
     public float jumpForce = 1f;
     public float moveFriction = 7f;
     public float rollSpeed = 7f;
     public float rollDelay = 0.1f;
 
     //Bools to check states
-    public bool isRoll = false;
     public bool isBackstep = false;
     public bool canMove = true;
     public bool isBlocking = false;
+    public bool isJumping = false;
+
+    //Setting the player state;
+    public enum PlayerState
+    {
+        NORMAL,
+        ROLLING,
+        BLOCKING,
+        JUMPING,
+        BACKSTEPPING,
+        STATE_MOVING
+    }
+    public PlayerState myPlayerstate = PlayerState.NORMAL;
 
     //Calling components
     private Rigidbody mRigid;
@@ -37,6 +49,7 @@ public class PlayerController : MonoBehaviour
 
     void Update()
     {
+        HandleInput();
         Animation();
         IsGrounded();
     }
@@ -44,6 +57,53 @@ public class PlayerController : MonoBehaviour
     void FixedUpdate()
     {
         Movement();
+    }
+
+    private void SetState(PlayerState newState)
+    {
+        myPlayerstate = newState;
+        switch (myPlayerstate)
+        {
+            case PlayerState.NORMAL:
+                stopBlock();
+                break;
+
+            case PlayerState.ROLLING:
+
+                break;
+
+            case PlayerState.BLOCKING:
+                Block();
+                break;
+
+            case PlayerState.JUMPING:
+
+                break;
+
+            case PlayerState.BACKSTEPPING:
+                Backstep();
+                break;
+        }
+    }
+
+    void HandleInput()
+    {
+        if (Input.GetButtonDown("L1"))
+        {
+            SetState(PlayerState.BLOCKING);
+        }
+        if (Input.GetButtonUp("L1"))
+        {
+            SetState(PlayerState.NORMAL);
+        }
+        if (Input.GetButtonDown("Triangle"))
+        {
+            SetState(PlayerState.JUMPING);
+        }
+        if (Input.GetButtonDown("Circle") && tempVel.x == 0 && tempVel.z == 0)
+        {
+            SetState(PlayerState.BACKSTEPPING);
+        }
     }
 
     void Animation()
@@ -66,6 +126,14 @@ public class PlayerController : MonoBehaviour
         //TODO: Add footstep sounds
     }
 
+    void Endbackstep()
+    {
+        canMove = true;
+        myPlayerstate = PlayerState.NORMAL;
+        isBackstep = false;
+        mAnim.SetBool("Isbackstep", false);
+    }
+
     void Jump()
     {
         if (IsGrounded())
@@ -78,7 +146,7 @@ public class PlayerController : MonoBehaviour
 
     IEnumerator Roll()
     {
-        isRoll = true;
+        myPlayerstate = PlayerState.ROLLING;
         canMove = false;
         mAnim.SetBool("Isrolling", true);
 
@@ -86,26 +154,34 @@ public class PlayerController : MonoBehaviour
         yield return new WaitForSeconds(rollDelay);
 
         canMove = true;
-        isRoll = false;
+        myPlayerstate = PlayerState.NORMAL;
     }
 
     void Backstep()
     {
         isBackstep = true;
+        canMove = false;
         mAnim.SetBool("Isbackstep", true);
-        mRigid.AddForce(-transform.forward * 50f, ForceMode.VelocityChange);
+        mRigid.AddForce(-transform.forward * 25f, ForceMode.Impulse);
     }
 
     void Block()
     {
-        canMove = false;
-        mRigid.velocity = new Vector3(0, tempVel.y, 0);
         isBlocking = true;
+        canMove = false;
         mAnim.SetBool("Isblocking", true);
+    }
+
+    void stopBlock()
+    {
+        isBlocking = false;
+        canMove = true;
+        mAnim.SetBool("Isblocking", false);
     }
 
     void Movement()
     {
+        //Getting Camera forward + right for relative controls
         Vector3 forward = Camera.main.transform.forward;
         Vector3 right = Camera.main.transform.right;
 
@@ -114,49 +190,25 @@ public class PlayerController : MonoBehaviour
 
         Vector3 playerMove = forward * moveVertical + right * moveHorizontal;
 
+        //If the player can move, do so
         if (canMove)
         {
             tempVel.x = playerMove.x * moveSpeed;
             tempVel.z = playerMove.z * moveSpeed;
             tempVel.y = 0.0f;
-        }
 
-        if ((moveHorizontal + moveVertical != 0) && !isRoll)
+            mRigid.velocity = Vector3.Scale(new Vector3(mRigid.velocity.x, mRigid.velocity.y, mRigid.velocity.z), new Vector3(moveFriction, 1.0f, moveFriction));
+        }
+        else
+            tempVel.x = 0;
+            tempVel.z = 0;
+
+        mRigid.velocity += tempVel;
+
+        if ((moveHorizontal + moveVertical != 0) && (myPlayerstate != PlayerState.ROLLING) && (myPlayerstate != PlayerState.BACKSTEPPING))
         {
             mRigid.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(new Vector3(playerMove.x, 0, playerMove.z)), 0.2F);
         }
-
-        if (Input.GetButtonDown("L1") && canMove && IsGrounded())
-        {
-            Block();
-        }
-
-        if (Input.GetButtonUp("L1"))
-        {
-            canMove = true;
-            isBlocking = false;
-            mAnim.SetBool("Isblocking", false);
-        }
-
-        if (Input.GetButtonDown("Triangle"))
-        {
-            Jump();
-        }
-
-        if (Input.GetButtonDown("Circle") && !isRoll && canMove && !isBackstep)
-        {
-            if ((Mathf.Abs(Input.GetAxis("Horizontal")) + Mathf.Abs(Input.GetAxis("Vertical")) > 0))
-            {
-                StartCoroutine(Roll());
-            }
-            else
-            {
-                Backstep();
-            }
-        }
-        mRigid.velocity += tempVel;
-
-        mRigid.velocity = Vector3.Scale(new Vector3(mRigid.velocity.x, mRigid.velocity.y, mRigid.velocity.z), new Vector3(moveFriction, 1.0f, moveFriction));
     }
 }
 
